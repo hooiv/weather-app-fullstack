@@ -76,16 +76,15 @@ const getHistory = () => {
     });
 }
 
-const saveSearch = (locationQuery, countryCode = null, notes = '') => {
-    // This assumes backend historyController expects separate fields now
-    const payload = { locationQuery, countryCode, notes };
+const saveSearch = (locationQuery, countryCode = null, startDate = null, endDate = null, notes = '') => {
+    // Backend expects these fields in the body now
+    const payload = { locationQuery, countryCode, startDate, endDate, notes };
     console.log('[api.js] saveSearch called with payload:', payload);
      return apiClient.post('/history', payload).then(res => {
          console.log('[api.js] saveSearch response:', res.data);
          return res.data;
      });
 }
-
 const updateHistoryNotes = (id, notes) => {
     const payload = { notes };
     console.log(`[api.js] updateHistoryNotes called for id ${id} with payload:`, payload);
