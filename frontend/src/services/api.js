@@ -139,6 +139,7 @@ const api = {
     getMapLink,
     getYoutubeLink,
     exportHistory,
+    
 };
 
 export default api;
