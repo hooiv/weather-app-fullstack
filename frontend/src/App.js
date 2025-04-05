@@ -1,5 +1,6 @@
 // frontend/src/App.js
 import React, { useState, useEffect } from 'react';
+
 import LocationInput from './components/LocationInput';
 import WeatherDisplay from './components/WeatherDisplay';
 import HistoryDisplay from './components/HistoryDisplay';
