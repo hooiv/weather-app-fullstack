@@ -358,3 +358,4 @@ exports.getForecast = async (req, res, next) => {
          }
      }
 };
+module.exports.getCoordinates = getCoordinates;
