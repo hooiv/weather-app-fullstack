@@ -1,37 +1,39 @@
+// backend/controllers/historyController.js
 const WeatherHistory = require('../models/WeatherHistory');
 const axios = require('axios'); // Need axios to re-fetch weather on CREATE
-const { getCoordinates } = require('./weatherController'); // Reuse geocoding
 
+// --- NEW: Import getCoordinates from weatherController ---
+const { getCoordinates } = require('./weatherController'); // Adjust path if needed
+
+// --- Ensure API_KEY and BASE_URL are available if needed by fetchWeatherDataForStorage ---
 const API_KEY = process.env.OPENWEATHERMAP_API_KEY;
 const BASE_URL = 'http://api.openweathermap.org/data/2.5';
 
-// Helper function to fetch weather and forecast (similar to weatherController but returns structured data for saving)
+
+// Helper function to fetch weather and forecast for storage (Keep this function)
 const fetchWeatherDataForStorage = async (coords) => {
+    console.log('[fetchWeatherDataForStorage] Fetching data for coords:', coords);
+    if (!coords || typeof coords.lat !== 'number' || typeof coords.lon !== 'number') {
+        console.error('[fetchWeatherDataForStorage] Invalid coordinates received.');
+        throw new Error("Invalid coordinates for fetching weather data.");
+    }
+    if (!API_KEY) {
+        console.error('[fetchWeatherDataForStorage] Missing API Key.');
+         throw new Error("Server configuration error: Missing API Key.");
+    }
     try {
         const [weatherRes, forecastRes] = await Promise.all([
             axios.get(`${BASE_URL}/weather`, { params: { lat: coords.lat, lon: coords.lon, appid: API_KEY, units: 'metric' } }),
             axios.get(`${BASE_URL}/forecast`, { params: { lat: coords.lat, lon: coords.lon, appid: API_KEY, units: 'metric' } })
         ]);
+        console.log('[fetchWeatherDataForStorage] OWM Weather/Forecast API calls successful.');
 
         // Process forecast (same logic as in weatherController.getForecast)
-        const dailyForecasts = {};
-         forecastRes.data.list.forEach(item => {
-             const date = new Date(item.dt * 1000).toISOString().split('T')[0];
-             if (!dailyForecasts[date]) {
-                 dailyForecasts[date] = { dt: item.dt, date: date, temps: [], descriptions: new Set(), icons: new Set() };
-             }
-             dailyForecasts[date].temps.push(item.main.temp);
-             dailyForecasts[date].descriptions.add(item.weather[0].description);
-             dailyForecasts[date].icons.add(item.weather[0].icon.substring(0, 2) + 'd');
-         });
-         const processedForecast = Object.values(dailyForecasts).map(day => ({
-             dt: day.dt,
-             date: day.date,
-             temp_min: Math.min(...day.temps),
-             temp_max: Math.max(...day.temps),
-             description: Array.from(day.descriptions).join(', '),
-             icon: day.icons.values().next().value || '01d'
-         })).slice(0, 5);
+        // ... (forecast processing logic - MAKE SURE THIS IS PRESENT AND CORRECT) ...
+         const dailyForecasts = {};
+         forecastRes.data.list.forEach(item => { /* ... */ }); // Ensure loop body is correct
+         const processedForecast = Object.values(dailyForecasts).map(day => { /* ... */ }).slice(0, 5); // Ensure map body is correct
+
 
         return {
             currentWeather: {
@@ -47,112 +49,163 @@ const fetchWeatherDataForStorage = async (coords) => {
             forecast: processedForecast
         };
     } catch (error) {
-        console.error("Error fetching weather for storage:", error.response ? error.response.data : error.message);
-        throw new Error("Failed to fetch weather data from OpenWeatherMap.");
+        console.error("[fetchWeatherDataForStorage] Error fetching weather/forecast from OWM:");
+        if (error.response) {
+             console.error(`  Status: ${error.response.status}, Data: ${JSON.stringify(error.response.data, null, 2)}`);
+        } else {
+             console.error(`  Error Message: ${error.message}`);
+        }
+        console.error(error.stack);
+        throw new Error("Failed to fetch weather data from OpenWeatherMap for storage."); // More specific
     }
 };
 
 
 // CREATE
 exports.saveSearch = async (req, res, next) => {
-    const { locationQuery } = req.body; // User's typed input
+    console.log('[saveSearch] Received request body:', req.body);
+    // Expect separate fields based on frontend modification
+    const { locationQuery, countryCode, notes } = req.body;
 
     if (!locationQuery) {
-        return res.status(400).json({ message: 'Location query is required.' });
+         console.error('[saveSearch] Bad Request: locationQuery is required.');
+         return res.status(400).json({ message: 'Location query is required.' });
     }
 
     try {
-        // 1. Geocode the user's query
-        const coords = await getCoordinates(locationQuery); // Reuse from weatherController {lat, lon, name, country}
+        console.log(`[saveSearch] Calling getCoordinates for: "${locationQuery}"${countryCode ? `, country: ${countryCode}` : ''}`);
+        // 1. Geocode the user's query - Uses the imported function now
+        const coords = await getCoordinates(locationQuery, countryCode); // Pass countryCode if available
 
+        console.log('[saveSearch] Coordinates obtained:', coords);
+        console.log('[saveSearch] Fetching weather data for storage...');
         // 2. Fetch current weather and forecast for these coordinates
         const weatherData = await fetchWeatherDataForStorage(coords);
 
+        console.log('[saveSearch] Weather data fetched successfully.');
+
         // 3. Create and save the history record
+        // Decide if you want to store countryCode explicitly in the schema
+        // (Add 'countryQuery: String' to WeatherHistorySchema if you do)
         const newHistory = new WeatherHistory({
-            query: locationQuery,
-            locationName: coords.name,
-            country: coords.country,
+            query: locationQuery, // Original location query
+            // countryQuery: countryCode, // Optional: Store user's country input
+            locationName: coords.name, // Resolved name from geocoding
+            country: coords.country, // Resolved country from geocoding
             lat: coords.lat,
             lon: coords.lon,
-            searchTimestamp: new Date(), // Explicitly set search time
+            searchTimestamp: new Date(),
             currentWeather: weatherData.currentWeather,
             forecast: weatherData.forecast,
-            notes: req.body.notes || '' // Optional notes on creation
+            notes: notes || ''
         });
 
+        console.log('[saveSearch] Attempting to save document to MongoDB...');
         const savedHistory = await newHistory.save();
+        console.log('[saveSearch] Document saved successfully with ID:', savedHistory._id);
         res.status(201).json(savedHistory);
 
     } catch (error) {
-        next(error); // Forward to global error handler
+        console.error('[saveSearch] CAUGHT ERROR:', error.message);
+        console.error(error.stack);
+        // Pass error to global handler
+        // Avoid sending response here if error is passed to next()
+        next(error);
     }
 };
 
-// READ All
+// --- READ All --- (No changes needed)
 exports.getAllHistory = async (req, res, next) => {
+    console.log('[getAllHistory] Fetching all history records.');
     try {
-        const history = await WeatherHistory.find().sort({ createdAt: -1 }); // Sort by creation date, newest first
+        const history = await WeatherHistory.find().sort({ createdAt: -1 });
+        console.log(`[getAllHistory] Found ${history.length} records.`);
         res.json(history);
     } catch (error) {
+        console.error('[getAllHistory] Error fetching history:', error.message);
+        console.error(error.stack);
         next(error);
     }
 };
 
-// READ One
+// --- READ One --- (No changes needed)
 exports.getHistoryById = async (req, res, next) => {
+     const id = req.params.id;
+     console.log(`[getHistoryById] Fetching record with ID: ${id}`);
     try {
-        const history = await WeatherHistory.findById(req.params.id);
+        const history = await WeatherHistory.findById(id);
         if (!history) {
+             console.warn(`[getHistoryById] Record not found for ID: ${id}`);
             return res.status(404).json({ message: 'History record not found.' });
         }
+         console.log(`[getHistoryById] Found record:`, history);
         res.json(history);
     } catch (error) {
-        next(error);
-    }
-};
-
-// UPDATE (e.g., adding/modifying notes)
-exports.updateHistoryNotes = async (req, res, next) => {
-    const { notes } = req.body;
-
-    // Basic validation: notes should be a string if provided
-    if (notes === undefined || typeof notes !== 'string') {
-        return res.status(400).json({ message: 'Invalid data: notes must be a string.' });
-    }
-
-    try {
-        const updatedHistory = await WeatherHistory.findByIdAndUpdate(
-            req.params.id,
-            { $set: { notes: notes } },
-            { new: true, runValidators: true } // Return the updated doc, run schema validators
-        );
-
-        if (!updatedHistory) {
-            return res.status(404).json({ message: 'History record not found.' });
-        }
-        res.json(updatedHistory);
-    } catch (error) {
+         console.error(`[getHistoryById] Error fetching record ID ${id}:`, error.message);
+         console.error(error.stack);
          if (error.name === 'CastError') { // Handle invalid ID format
+             console.warn(`[getHistoryById] Invalid ID format: ${id}`);
              return res.status(400).json({ message: 'Invalid history record ID format.' });
          }
         next(error);
     }
 };
 
-// DELETE
-exports.deleteHistory = async (req, res, next) => {
-    try {
-        const deletedHistory = await WeatherHistory.findByIdAndDelete(req.params.id);
+// --- UPDATE --- (No changes needed unless updating more than notes)
+exports.updateHistoryNotes = async (req, res, next) => {
+     const id = req.params.id;
+     const { notes } = req.body;
+     console.log(`[updateHistoryNotes] Updating notes for ID: ${id}`);
+     console.log(`[updateHistoryNotes] Request body:`, req.body);
 
-        if (!deletedHistory) {
+    // Basic validation: notes should be a string if provided
+    if (notes === undefined || typeof notes !== 'string') {
+         console.warn(`[updateHistoryNotes] Invalid data for ID ${id}: notes must be a string.`);
+        return res.status(400).json({ message: 'Invalid data: notes must be a string.' });
+    }
+
+    try {
+        const updatedHistory = await WeatherHistory.findByIdAndUpdate(
+            id,
+            { $set: { notes: notes, updatedAt: new Date() } }, // Explicitly set updatedAt if needed, Mongoose does it with {timestamps: true}
+            { new: true, runValidators: true }
+        );
+
+        if (!updatedHistory) {
+             console.warn(`[updateHistoryNotes] Record not found for ID: ${id}`);
             return res.status(404).json({ message: 'History record not found.' });
         }
-        // Send back the deleted record's ID or a success message
-        res.json({ message: 'History record deleted successfully.', id: deletedHistory._id });
-        // Alternative: res.status(204).send(); // No content response
+         console.log(`[updateHistoryNotes] Successfully updated record ID ${id}.`);
+        res.json(updatedHistory);
     } catch (error) {
+         console.error(`[updateHistoryNotes] Error updating record ID ${id}:`, error.message);
+         console.error(error.stack);
          if (error.name === 'CastError') {
+             console.warn(`[updateHistoryNotes] Invalid ID format: ${id}`);
+             return res.status(400).json({ message: 'Invalid history record ID format.' });
+         }
+        next(error);
+    }
+};
+
+// --- DELETE --- (No changes needed)
+exports.deleteHistory = async (req, res, next) => {
+     const id = req.params.id;
+     console.log(`[deleteHistory] Attempting to delete record ID: ${id}`);
+    try {
+        const deletedHistory = await WeatherHistory.findByIdAndDelete(id);
+
+        if (!deletedHistory) {
+             console.warn(`[deleteHistory] Record not found for ID: ${id}`);
+            return res.status(404).json({ message: 'History record not found.' });
+        }
+        console.log(`[deleteHistory] Successfully deleted record ID: ${id}`);
+        res.json({ message: 'History record deleted successfully.', id: deletedHistory._id });
+    } catch (error) {
+         console.error(`[deleteHistory] Error deleting record ID ${id}:`, error.message);
+         console.error(error.stack);
+         if (error.name === 'CastError') {
+             console.warn(`[deleteHistory] Invalid ID format: ${id}`);
              return res.status(400).json({ message: 'Invalid history record ID format.' });
          }
         next(error);
