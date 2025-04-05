@@ -262,7 +262,7 @@ function App() {
             <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-lg p-4 sm:p-6">
                 {/* App Title */}
                 <h1 className="text-2xl sm:text-3xl font-bold text-center text-gray-800 mb-4 sm:mb-6">
-                    Global Weather Search
+                    AI Weather Hub
                 </h1>
 
                 {/* Location Input Component */}
