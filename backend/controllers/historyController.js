@@ -1,11 +1,11 @@
 // backend/controllers/historyController.js
 const WeatherHistory = require('../models/WeatherHistory');
-const axios = require('axios'); // Need axios to re-fetch weather on CREATE
+const axios = require('axios');
 
-// --- NEW: Import getCoordinates from weatherController ---
-const { getCoordinates } = require('./weatherController'); // Adjust path if needed
+// --- THIS LINE IS CRUCIAL ---
+const { getCoordinates } = require('./weatherController');
+// --- ENSURE THIS LINE EXISTS AND IS SPELLED CORRECTLY ---
 
-// --- Ensure API_KEY and BASE_URL are available if needed by fetchWeatherDataForStorage ---
 const API_KEY = process.env.OPENWEATHERMAP_API_KEY;
 const BASE_URL = 'http://api.openweathermap.org/data/2.5';
 
