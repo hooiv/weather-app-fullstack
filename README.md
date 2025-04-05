@@ -1,3 +1,5 @@
+Important: After a period of inactivity , the website https://weather-app-fullstack-frontend.onrender.com/ would require upto 60 seconds to redeploy on the backend as it's on the free tier of render. So, after visiting site you may have to wait 60 seconds .
+
 # Full Stack Weather App - AI Engineer Intern Assessment
 
 This project is a full-stack weather application built for the PM Accelerator AI Engineer Intern technical assessment. It allows users to get current weather information by location (city/postal code + optional country) or geolocation, view 5-day forecasts, optionally save searches with a date range, view search history, see related integrations (Maps, YouTube links), and export search history.
