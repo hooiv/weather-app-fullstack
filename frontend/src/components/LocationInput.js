@@ -18,12 +18,11 @@ const LocationInput = ({ onSubmit, loading, // Add props for date handling
     const [selectedCountryCode, setSelectedCountryCode] = useState('');
 
     const handleSubmit = (event) => {
-        // Add console log to confirm this runs
         console.log('[LocationInput] handleSubmit triggered!');
         event.preventDefault();
         const trimmedLocation = locationQuery.trim();
         console.log('[LocationInput] Submitting weather request:', { location: trimmedLocation, country: selectedCountryCode || null });
-        if (trimmedLocation) {
+        if (trimmedLocation && onSubmit) { // Check if onSubmit exists
             onSubmit({ location: trimmedLocation, country: selectedCountryCode || null }, false);
         }
     };
@@ -39,8 +38,7 @@ const LocationInput = ({ onSubmit, loading, // Add props for date handling
             (position) => {
                 const { latitude, longitude } = position.coords;
                 console.log('[LocationInput] Geolocation success:', { lat: latitude, lon: longitude });
-                // Ensure onSubmit exists before calling
-                if (onSubmit) {
+                if (onSubmit) { // Check if onSubmit exists
                     onSubmit({ lat: latitude, lon: longitude }, true);
                 }
              },
@@ -55,10 +53,8 @@ const LocationInput = ({ onSubmit, loading, // Add props for date handling
     // --- Date Change Handlers ---
     const handleStartDateChange = (e) => {
         console.log('[LocationInput] Start Date changed:', e.target.value);
-        // Ensure setStartDate exists before calling
-        if (setStartDate) {
+        if (setStartDate) { // Check if setter exists
             setStartDate(e.target.value);
-            // Optional: Clear end date if start date becomes later than end date
             if (endDate && e.target.value > endDate && setEndDate) {
                 setEndDate('');
             }
@@ -67,8 +63,7 @@ const LocationInput = ({ onSubmit, loading, // Add props for date handling
 
      const handleEndDateChange = (e) => {
         console.log('[LocationInput] End Date changed:', e.target.value);
-         // Ensure setEndDate exists before calling
-         if (setEndDate) {
+         if (setEndDate) { // Check if setter exists
             setEndDate(e.target.value);
          }
      };
@@ -87,16 +82,15 @@ const LocationInput = ({ onSubmit, loading, // Add props for date handling
     return (
         <div className="mb-4">
             {/* Weather Search Form */}
-            <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-2 mb-2 items-start flex-wrap"> {/* Added flex-wrap */}
-
-                {/* Location Input - ADDED onChange and other props back */}
+            <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-2 mb-2 items-start flex-wrap">
+                {/* Location Input */}
                 <div className="flex-grow w-full sm:w-auto">
                     <label htmlFor="location-input" className="sr-only">Location</label>
                     <input
                         id="location-input"
                         type="text"
                         value={locationQuery}
-                        onChange={handleLocationChange} // *** ADDED THIS LINE ***
+                        onChange={handleLocationChange}
                         placeholder="Enter City or Zip/Postal Code..."
                         disabled={loading}
                         className="w-full px-3 py-2 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
@@ -104,15 +98,15 @@ const LocationInput = ({ onSubmit, loading, // Add props for date handling
                     />
                 </div>
 
-                {/* Country Dropdown - ADDED className and disabled props */}
+                {/* Country Dropdown */}
                 <div className="w-full sm:w-auto">
                     <label htmlFor="country-select" className="sr-only">Country (Optional)</label>
                     <select
                         id="country-select"
                         value={selectedCountryCode}
-                        onChange={handleCountryChange} // Use specific handler
-                        disabled={loading} // *** ADDED THIS LINE ***
-                        className="w-full sm:w-48 px-3 py-2 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 bg-white appearance-none" // *** ADDED THIS LINE ***
+                        onChange={handleCountryChange}
+                        disabled={loading}
+                        className="w-full sm:w-48 px-3 py-2 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 bg-white appearance-none"
                     >
                          <option value="">-- Select Country --</option>
                          {countryList.map(country => (
@@ -121,58 +115,70 @@ const LocationInput = ({ onSubmit, loading, // Add props for date handling
                      </select>
                  </div>
 
-                {/* Submit Button - ADDED className */}
+                {/* Submit Button */}
                 <button
                     type="submit"
                     disabled={loading || !locationQuery.trim()}
-                    className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed" // *** ADDED THIS LINE ***
+                    className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     {loading ? 'Searching...' : 'Get Weather'}
                 </button>
             </form>
 
-             {/* Date Range Inputs (These looked correct already) */}
-             <div className="flex flex-col sm:flex-row gap-2 my-3 items-center justify-center flex-wrap">
-                 {/* ... date inputs ... */}
-                  <span className="text-sm text-gray-600 mb-1 sm:mb-0">Optional Date Range (for saving):</span>
-                  <div className='flex gap-2 items-center'>
-                      <div>
-                         <label htmlFor="start-date" className="sr-only">Start Date</label>
-                         <input
-                            id="start-date"
-                            type="date"
-                            value={startDate}
-                            onChange={handleStartDateChange}
-                            min={getTodayDate()}
-                            disabled={loading}
-                            className="px-2 py-1 border border-gray-300 rounded shadow-sm text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
-                            aria-label="Start Date"
-                         />
+             {/* --- Date Range Inputs Section --- */}
+             <div className="my-3 px-2"> {/* Added padding */}
+                 <div className="flex flex-col sm:flex-row gap-2 items-center justify-center flex-wrap">
+                     {/* Label moved outside the flex container for dates */}
+                     <span className="text-sm text-gray-600 mb-1 sm:mb-0 flex-shrink-0 mr-2">
+                         Optional Dates (for saving):
+                     </span>
+                     {/* Container for date inputs */}
+                     <div className='flex gap-2 items-center'>
+                         <div>
+                             <label htmlFor="start-date" className="sr-only">Start Date</label>
+                             <input
+                                id="start-date"
+                                type="date"
+                                value={startDate}
+                                onChange={handleStartDateChange}
+                                min={getTodayDate()}
+                                disabled={loading}
+                                className="px-2 py-1 border border-gray-300 rounded shadow-sm text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
+                                aria-label="Start Date"
+                             />
+                         </div>
+                         <span className="text-gray-500">-</span>
+                         <div>
+                             <label htmlFor="end-date" className="sr-only">End Date</label>
+                             <input
+                                id="end-date"
+                                type="date"
+                                value={endDate}
+                                onChange={handleEndDateChange}
+                                min={startDate || getTodayDate()}
+                                disabled={loading || !startDate}
+                                className="px-2 py-1 border border-gray-300 rounded shadow-sm text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
+                                aria-label="End Date"
+                             />
+                         </div>
                      </div>
-                      <span className="text-gray-500">-</span>
-                      <div>
-                         <label htmlFor="end-date" className="sr-only">End Date</label>
-                         <input
-                            id="end-date"
-                            type="date"
-                            value={endDate}
-                            onChange={handleEndDateChange}
-                            min={startDate || getTodayDate()}
-                            disabled={loading || !startDate}
-                            className="px-2 py-1 border border-gray-300 rounded shadow-sm text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
-                            aria-label="End Date"
-                         />
-                      </div>
-                  </div>
+                 </div>
+                 {/* --- Informational Text Added Below Dates --- */}
+                 <p className="text-xs text-gray-500 text-center mt-2 px-4">
+                     Note: Selected dates are saved with your search history. The displayed weather always shows the current conditions and the standard ~5-day forecast due to API limitations.
+                 </p>
+                 {/* --- End Informational Text --- */}
              </div>
+             {/* --- End Date Range Inputs Section --- */}
 
-            {/* Use Current Location Button - ADDED className */}
-            <div className="text-center">
+
+            {/* Use Current Location Button */}
+            <div className="text-center mt-4"> {/* Added margin-top */}
                  <span className="text-sm text-gray-500 mx-2">or</span>
                  <button
                      onClick={handleGetCurrentLocation}
                      disabled={loading}
-                     className="px-4 py-2 bg-green-600 text-white rounded shadow hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 disabled:opacity-50" // *** ADDED THIS LINE ***
+                     className="px-4 py-2 bg-green-600 text-white rounded shadow hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 disabled:opacity-50"
                  >
                      Use Current Location
                  </button>
