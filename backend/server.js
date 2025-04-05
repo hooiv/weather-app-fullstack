@@ -1,4 +1,3 @@
-// backend/server.js
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
@@ -34,20 +33,10 @@ app.get('/', (req, res) => {
 
 // Global Error Handler (should be last)
 app.use((err, req, res, next) => {
-    // --- ADD LOGGING ---
-    console.error('--- Global Error Handler Triggered ---');
-    console.error(`Timestamp: ${new Date().toISOString()}`);
-    console.error(`Requested URL: ${req.originalUrl}`);
-    console.error(`Error Status: ${err.status || 500}`);
-    console.error(`Error Message: ${err.message || 'An unexpected error occurred.'}`);
-    console.error('Error Stack Trace:');
-    console.error(err.stack); // Ensure stack trace is logged
-    // --- END LOGGING ---
-
+    console.error(err.stack);
     res.status(err.status || 500).json({
         message: err.message || 'An unexpected error occurred.',
-        // Only include detailed error in development environment for security
-        error: process.env.NODE_ENV === 'development' ? { stack: err.stack } : {}
+        error: process.env.NODE_ENV === 'development' ? err : {} // Only show stack trace in dev
     });
 });
 
