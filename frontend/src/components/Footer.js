@@ -6,8 +6,9 @@ const Footer = ({ yourName }) => {
             <p className="mb-2">Developed by: {"Aditya Chauhan"}</p>
             <p className="font-semibold">About Product Manager Accelerator (PMA):</p>
             <p className="mb-2">
-                 PMA is dedicated to empowering the next generation of product leaders. We provide comprehensive training, mentorship, and resources to help aspiring and current product managers excel in their careers and drive innovation.
-            </p>
+            From entry-level to VP of Product, we support PM professionals through every stage of their careers.
+
+</p>
             <a
                 href="https://www.linkedin.com/school/pmaccelerator/"
                 target="_blank"
