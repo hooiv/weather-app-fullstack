@@ -1,100 +1,101 @@
 // backend/controllers/historyController.js
 const WeatherHistory = require('../models/WeatherHistory');
 const axios = require('axios');
-
-// --- THIS LINE IS CRUCIAL ---
-const { getCoordinates } = require('./weatherController');
-// --- ENSURE THIS LINE EXISTS AND IS SPELLED CORRECTLY ---
+const { getCoordinates } = require('./weatherController'); // Ensure this is imported
 
 const API_KEY = process.env.OPENWEATHERMAP_API_KEY;
 const BASE_URL = 'http://api.openweathermap.org/data/2.5';
 
+// Helper function (ensure it's present and correct)
+const fetchWeatherDataForStorage = async (coords) => { /* ... */ };
 
-// Helper function to fetch weather and forecast for storage (Keep this function)
-const fetchWeatherDataForStorage = async (coords) => {
-    console.log('[fetchWeatherDataForStorage] Fetching data for coords:', coords);
-    if (!coords || typeof coords.lat !== 'number' || typeof coords.lon !== 'number') {
-        console.error('[fetchWeatherDataForStorage] Invalid coordinates received.');
-        throw new Error("Invalid coordinates for fetching weather data.");
-    }
-    if (!API_KEY) {
-        console.error('[fetchWeatherDataForStorage] Missing API Key.');
-         throw new Error("Server configuration error: Missing API Key.");
-    }
-    try {
-        const [weatherRes, forecastRes] = await Promise.all([
-            axios.get(`${BASE_URL}/weather`, { params: { lat: coords.lat, lon: coords.lon, appid: API_KEY, units: 'metric' } }),
-            axios.get(`${BASE_URL}/forecast`, { params: { lat: coords.lat, lon: coords.lon, appid: API_KEY, units: 'metric' } })
-        ]);
-        console.log('[fetchWeatherDataForStorage] OWM Weather/Forecast API calls successful.');
+// --- Utility for Date Validation --- (Could be moved to utils/validators.js)
+const validateDateRange = (startDateStr, endDateStr) => {
+     // Only validate if at least one date is provided
+     if (!startDateStr && !endDateStr) {
+         return { isValid: true, error: null, dates: { startDate: null, endDate: null } };
+     }
+     // If only one is provided, it's currently considered invalid for a 'range' by FE, but backend could allow just one
+     if (!startDateStr || !endDateStr) {
+        // return { isValid: false, error: "Both start and end dates are required if specifying a range." };
+        // OR allow single dates:
+         const singleDate = startDateStr ? new Date(startDateStr) : new Date(endDateStr);
+         if (isNaN(singleDate.getTime())) {
+            return { isValid: false, error: "Invalid date format provided.", dates: {} };
+         }
+          // Optional: Check if date is not too far in past/future if needed
+         return { isValid: true, error: null, dates: { startDate: startDateStr? singleDate: null, endDate: endDateStr? singleDate: null } };
+     }
 
-        // Process forecast (same logic as in weatherController.getForecast)
-        // ... (forecast processing logic - MAKE SURE THIS IS PRESENT AND CORRECT) ...
-         const dailyForecasts = {};
-         forecastRes.data.list.forEach(item => { /* ... */ }); // Ensure loop body is correct
-         const processedForecast = Object.values(dailyForecasts).map(day => { /* ... */ }).slice(0, 5); // Ensure map body is correct
+     const startDate = new Date(startDateStr);
+     const endDate = new Date(endDateStr);
 
+     if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        return { isValid: false, error: "Invalid date format. Please use YYYY-MM-DD.", dates: {} };
+     }
 
-        return {
-            currentWeather: {
-                timestamp: weatherRes.data.dt,
-                temp: weatherRes.data.main.temp,
-                feels_like: weatherRes.data.main.feels_like,
-                humidity: weatherRes.data.main.humidity,
-                pressure: weatherRes.data.main.pressure,
-                wind_speed: weatherRes.data.wind.speed,
-                description: weatherRes.data.weather[0].description,
-                icon: weatherRes.data.weather[0].icon,
-            },
-            forecast: processedForecast
-        };
-    } catch (error) {
-        console.error("[fetchWeatherDataForStorage] Error fetching weather/forecast from OWM:");
-        if (error.response) {
-             console.error(`  Status: ${error.response.status}, Data: ${JSON.stringify(error.response.data, null, 2)}`);
-        } else {
-             console.error(`  Error Message: ${error.message}`);
-        }
-        console.error(error.stack);
-        throw new Error("Failed to fetch weather data from OpenWeatherMap for storage."); // More specific
-    }
+     // Set time to start/end of day for comparison consistency
+     startDate.setHours(0, 0, 0, 0);
+     endDate.setHours(23, 59, 59, 999);
+
+     if (startDate > endDate) {
+        return { isValid: false, error: "Start date cannot be after end date.", dates: {} };
+     }
+
+     // Optional: Add further constraints (e.g., range not too long, not too far in future/past)
+     // const today = new Date(); today.setHours(0, 0, 0, 0);
+     // if (startDate < today) {
+     //    return { isValid: false, error: "Start date cannot be in the past." };
+     // }
+
+    return { isValid: true, error: null, dates: { startDate, endDate } }; // Return validated Date objects
 };
-
+// --- End Utility ---
 
 // CREATE
 exports.saveSearch = async (req, res, next) => {
     console.log('[saveSearch] Received request body:', req.body);
-    // Expect separate fields based on frontend modification
-    const { locationQuery, countryCode, notes } = req.body;
+    // --- Get dates from body ---
+    const { locationQuery, countryCode, startDate: startDateStr, endDate: endDateStr, notes } = req.body;
 
     if (!locationQuery) {
          console.error('[saveSearch] Bad Request: locationQuery is required.');
          return res.status(400).json({ message: 'Location query is required.' });
     }
 
+    // --- Validate Date Range ---
+    const dateValidation = validateDateRange(startDateStr, endDateStr);
+    if (!dateValidation.isValid) {
+        console.error(`[saveSearch] Invalid Date Range: ${dateValidation.error}`);
+        return res.status(400).json({ message: dateValidation.error });
+    }
+    const { startDate, endDate } = dateValidation.dates; // Use validated Date objects or null
+     console.log('[saveSearch] Date validation passed. Start:', startDate, 'End:', endDate);
+    // ---
+
     try {
         console.log(`[saveSearch] Calling getCoordinates for: "${locationQuery}"${countryCode ? `, country: ${countryCode}` : ''}`);
-        // 1. Geocode the user's query - Uses the imported function now
-        const coords = await getCoordinates(locationQuery, countryCode); // Pass countryCode if available
+        // 1. Geocode (already validated to exist if successful)
+        const coords = await getCoordinates(locationQuery, countryCode);
 
         console.log('[saveSearch] Coordinates obtained:', coords);
         console.log('[saveSearch] Fetching weather data for storage...');
-        // 2. Fetch current weather and forecast for these coordinates
+        // 2. Fetch current weather/forecast data
         const weatherData = await fetchWeatherDataForStorage(coords);
 
         console.log('[saveSearch] Weather data fetched successfully.');
 
-        // 3. Create and save the history record
-        // Decide if you want to store countryCode explicitly in the schema
-        // (Add 'countryQuery: String' to WeatherHistorySchema if you do)
+        // 3. Create and save the history record including dates
         const newHistory = new WeatherHistory({
-            query: locationQuery, // Original location query
-            // countryQuery: countryCode, // Optional: Store user's country input
-            locationName: coords.name, // Resolved name from geocoding
-            country: coords.country, // Resolved country from geocoding
+            query: locationQuery,
+            countryQuery: countryCode, // Store user input country code if desired
+            locationName: coords.name,
+            country: coords.country,
             lat: coords.lat,
             lon: coords.lon,
             searchTimestamp: new Date(),
+            startDate: startDate, // Store validated start date (or null)
+            endDate: endDate,     // Store validated end date (or null)
             currentWeather: weatherData.currentWeather,
             forecast: weatherData.forecast,
             notes: notes || ''
@@ -108,8 +109,7 @@ exports.saveSearch = async (req, res, next) => {
     } catch (error) {
         console.error('[saveSearch] CAUGHT ERROR:', error.message);
         console.error(error.stack);
-        // Pass error to global handler
-        // Avoid sending response here if error is passed to next()
+        // Pass error to global handler - ensure getCoordinates throws clear errors
         next(error);
     }
 };
