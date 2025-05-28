@@ -1,14 +1,12 @@
-# Full Stack Weather App - AI Engineer Intern Assessment
+# Full Stack Weather App 
 
-This project is a full-stack weather application built for the PM Accelerator AI Engineer Intern technical assessment. It allows users to get current weather information by location (city/postal code + optional country) or geolocation, view 5-day forecasts, optionally save searches with a date range, view search history, see related integrations (Maps, YouTube links), and export search history.
-
-**Submitted By:** ADITYA CHAUHAN
+This project is a full-stack weather application . It allows users to get current weather information by location (city/postal code + optional country) or geolocation, view 5-day forecasts, optionally save searches with a date range, view search history, see related integrations (Maps, YouTube links), and export search history.
 
 ---
 
 ## Features
 
-### Frontend (Tech Assessment #1)
+### Frontend 
 
 *   **Location Input:** Enter location by City Name or Zip/Postal Code.
 *   **Optional Country Selection:** Includes a dropdown to select the country, improving postal code geocoding accuracy.
@@ -22,7 +20,7 @@ This project is a full-stack weather application built for the PM Accelerator AI
 *   **API Interaction:** Communicates with the backend API.
 *   **State Management:** Uses React Hooks (`useState`, `useEffect`).
 
-### Backend (Tech Assessment #2)
+### Backend
 
 *   **RESTful API:** Built with Node.js and Express.js.
 *   **Weather Data Fetching:** Fetches real-time current weather and 5-day/3-hour forecast data from the OpenWeatherMap API.
